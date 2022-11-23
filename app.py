@@ -10,6 +10,8 @@ import wave
 import struct
 import math
 from datetime import timedelta
+import ffmpeg
+from pathlib import Path
 
 warnings.simplefilter('ignore')
 
@@ -20,10 +22,14 @@ batch_size = 16
 epoch = 50
 time = 3
 
+target_label = {0:"Calliope",1:"Ninomae",2:"Watson",3:"Gura",4:"Kiara"}
+
 reconstructed_model = load_model("vtuber_reco.h5")
-predfile = st.file_uploader("Upload file", type=['wav','mp3','mp4'])
-a = st.text_input(label="OR YOUTUBE LINK HERE👇:")
-print(a)
+predfile = st.sidebar.file_uploader("Upload file", type=['wav'])
+
+a = st.sidebar.text_input(label="OR YOUTUBE LINK HERE👇:")
+if predfile is not None:
+    st.sidebar.write("to use youtube link, please delete all files above.")
 
 def preprocess(audio,threshold,sample_length,sample_rate):
     audio, _ = librosa.effects.trim(audio, threshold)
@@ -50,8 +56,20 @@ def preprocess(audio,threshold,sample_length,sample_rate):
 
     return feature
 
-def pred_with_timestamp(pred_path, time):
-    wr = wave.open(pred_path, 'r')
+def load_wave_file(pred_path):
+    try:
+        wr = wave.open(pred_path, 'r')
+    except:
+        st.write("preparing for prediction....")
+        stream = ffmpeg.input(Path(pred_path))
+        stream = ffmpeg.output(stream, "test.wav")
+        ffmpeg.run(stream)
+        wr = wave.open("test.wav", 'r')
+    return wr
+
+
+def target_cropper(pred_path, time):
+    wr = load_wave_file(pred_path)
 
     #waveファイルが持つ性質を取得
     ch = wr.getnchannels()
@@ -75,7 +93,6 @@ def pred_with_timestamp(pred_path, time):
     X = np.frombuffer(data, dtype='int16')
 
     for i in range(num_cut):
-        #print(str(i) + ".wav --> OK!")
         #出力データを生成
         outf = str(i) + '.wav'
         start_cut = i*frames
@@ -91,11 +108,13 @@ def pred_with_timestamp(pred_path, time):
         ww.writeframes(outd)
         ww.close()
 
-    time_to = str(timedelta(seconds=0))
+    return num_cut
+
+def predict_timestamp_and_remove(num_cut):
+    time_from = str(timedelta(seconds=0))
+    last_speaker = None
     for i in range(num_cut):
-        time_from = time_to
         time_to = str(timedelta(seconds=(i+1)*time))
-        st.write(f'{time_from} --> {time_to}')
         x_batch = []  # feature
         path = f'{i}.wav'
         audio, _ = librosa.load(path, sr=sample_rate)
@@ -103,13 +122,31 @@ def pred_with_timestamp(pred_path, time):
         x_batch.append(mfccs)
         x_batch = np.asarray(x_batch)
         pred = reconstructed_model.predict(x_batch,verbose=0)
-        st.write(pred.argmax())
+
+        if pred.argmax() == last_speaker:
+            pass
+        # the first
+        elif last_speaker == None:
+            last_speaker = pred.argmax()
+        # the last
+        elif i+1 == num_cut:
+            st.write(f'{time_from} --> {time_to}')
+            st.write(target_label[pred.argmax()])
+            st.write(f'probability: {round(max(pred[0]),2)}')
+        else:
+            st.write(f'{time_from} --> {time_to}')
+            st.write(target_label[pred.argmax()])
+            st.write(f'probability: {round(max(pred[0]),2)}')
+            last_speaker = pred.argmax()
+            time_from = time_to
+
         #st.write(str(pred))
         os.remove(path)
-
     return
 
+
 try:
-    pred_with_timestamp(predfile,3)
+    n = target_cropper(predfile,3)
+    predict_timestamp_and_remove(n)
 except:
     pass
