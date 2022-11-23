@@ -1,3 +1,4 @@
+soundfile
 keras==2.7.0
 librosa==0.9.2
 numpy==1.19.5
