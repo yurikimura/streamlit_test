@@ -10,8 +10,12 @@ import wave
 import struct
 import math
 from datetime import timedelta
-import ffmpeg
-from pathlib import Path
+
+# import youtube_dl
+# #import ffmpeg
+
+import io
+from scipy.io import wavfile
 
 warnings.simplefilter('ignore')
 
@@ -27,9 +31,21 @@ target_label = {0:"Calliope",1:"Ninomae",2:"Watson",3:"Gura",4:"Kiara"}
 reconstructed_model = load_model("vtuber_reco.h5")
 predfile = st.sidebar.file_uploader("Upload file", type=['wav'])
 
-a = st.sidebar.text_input(label="OR YOUTUBE LINK HERE👇:")
-if predfile is not None:
-    st.sidebar.write("to use youtube link, please delete all files above.")
+ydl_opts = {
+    'format': 'bestaudio/best',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'wav',
+    }],
+}
+
+# def youtube_to_wav(youtube_url):
+#     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+#         ydl.download([youtube_url])
+#         stream = ffmpeg.input('output.m4a')
+#         stream = ffmpeg.output(stream, 'output.wav')
+#         wr = wave.open('output.wav', 'r')
+#     return wr
 
 def preprocess(audio,threshold,sample_length,sample_rate):
     audio, _ = librosa.effects.trim(audio, threshold)
@@ -56,26 +72,24 @@ def preprocess(audio,threshold,sample_length,sample_rate):
 
     return feature
 
-def load_wave_file(pred_path):
-    try:
-        wr = wave.open(pred_path, 'r')
-    except:
-        st.write("preparing for prediction....")
-        stream = ffmpeg.input(Path(pred_path))
-        stream = ffmpeg.output(stream, "test.wav")
-        ffmpeg.run(stream)
-        wr = wave.open("test.wav", 'r')
-    return wr
+# def load_wave_file(pred_path):
+#     try:
+#         wr = wave.open(pred_path, 'r')
+#     except:
+#         st.write("preparing for prediction....")
+#         stream = ffmpeg.input(Path(pred_path))
+#         stream = ffmpeg.output(stream, "test.wav")
+#         ffmpeg.run(stream)
+#         wr = wave.open("test.wav", 'r')
+#     return wr
 
 
-def target_cropper(pred_path, time):
-    wr = load_wave_file(pred_path)
-
+def target_cropper(wr, time):
     #waveファイルが持つ性質を取得
-    ch = wr.getnchannels()
+    ch = wr.getnchannels()#モノラルorステレオ
     width = wr.getsampwidth()
-    fr = wr.getframerate()
-    fn = wr.getnframes()
+    fr = wr.getframerate()#サンプリング周波数
+    fn = wr.getnframes()#フレームの総数
     total_time = 1.0 * fn / fr
     integer = math.floor(total_time)
     t = int(time)
@@ -83,6 +97,7 @@ def target_cropper(pred_path, time):
     num_cut = int(integer//t)
 
     # 確認用
+    st.write(f'Target File :  {predfile.name}')
     st.write("total time(s) : ", total_time)
     st.write("total time(integer) : ", integer)
     st.write("")
@@ -91,6 +106,12 @@ def target_cropper(pred_path, time):
     data = wr.readframes(wr.getnframes())
     wr.close()
     X = np.frombuffer(data, dtype='int16')
+
+    # play sound
+    virtualfile = io.BytesIO()
+    wavfile.write(virtualfile, rate=fr*2, data=X)
+
+    st.audio(virtualfile)
 
     for i in range(num_cut):
         #出力データを生成
@@ -144,9 +165,19 @@ def predict_timestamp_and_remove(num_cut):
         os.remove(path)
     return
 
+# youtube_url = st.sidebar.text_input(label="OR YOUTUBE LINK HERE (<4min)👇:")
+# if predfile is not None:
+#     st.sidebar.write("to use youtube link, please delete all files above.")
+# elif youtube_url is None:
+#     pass
+# else:
+#     st.sidebar.write(youtube_url)
+#     wr = youtube_to_wav(youtube_url)
 
 try:
-    n = target_cropper(predfile,3)
+    #wr = load_wave_file(pred_path)
+    wr = wave.open(predfile, 'r')
+    n = target_cropper(wr,3)
     predict_timestamp_and_remove(n)
 except:
     pass
