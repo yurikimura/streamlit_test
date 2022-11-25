@@ -189,6 +189,6 @@ if predfile is not None:
     wr = wave.open(predfile, 'r')
     n = target_cropper(wr,3)
     #predict_timestamp_and_remove(n)
-    components.iframe("http://localhost:8501/pages/test",height=300,scrolling=True)
+    components.iframe("http://localhost:8501/test",height=600,scrolling=True)
 else:
     pass
