@@ -31,6 +31,16 @@ time = 3
 
 reconstructed_model = load_model("vtuber_reco.h5")
 target_label = {0:"Calliope",1:"Ninomae",2:"Watson",3:"Gura",4:"Kiara"}
+
+# hide "created by streamlit"
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 ydl_opts = {
     'format': 'bestaudio/best',
     'postprocessors': [{
@@ -40,7 +50,6 @@ ydl_opts = {
 }
 
 predfile = st.sidebar.file_uploader("Upload file", type=['wav'])
-
 
 # def youtube_to_wav(youtube_url):
 #     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -115,8 +124,6 @@ def target_cropper(wr, time):
     wavfile.write(virtualfile, rate=fr*2, data=X)
     st.audio(virtualfile)
 
-
-
     for i in range(num_cut):
         #出力データを生成
         outf = str(i) + '.wav'
@@ -138,6 +145,7 @@ def target_cropper(wr, time):
 def predict_timestamp_and_remove(num_cut):
     time_from = str(timedelta(seconds=0))
     last_speaker = None
+    showing_line = f""
 
     for i in range(num_cut):
         time_to = str(timedelta(seconds=(i+1)*time))
@@ -162,14 +170,15 @@ def predict_timestamp_and_remove(num_cut):
             st.write(target_label[pred.argmax()])
             st.write(f'probability: {round(max(pred[0]),2)}')
         else:
-            st.write(f'{time_from} --> {time_to}')
-            st.write(target_label[pred.argmax()])
-            st.write(f'probability: {round(max(pred[0]),2)}')
-            # target_timestamp = [f'{time_from} --> {time_to}']
-            # with server_state_lock.count:
-            #     server_state.df.loc[len(df)] = target_timestamp+pred.tolist()[0]
-            # last_speaker = pred.argmax()
-            # time_from = time_to
+            target_timestemp = f'{time_from} --> {time_to}'
+            target_speaker = target_label[pred.argmax()]
+            probability = f'probability: {round(max(pred[0]),2)}'
+            appending_line = f'<p style="color:#FFFFFF">{target_timestemp}\n\
+                {target_speaker}\n{probability}</p>'
+            showing_line += appending_line
+            components.html(showing_line,height=400,scrolling=True)
+            last_speaker = pred.argmax()
+            time_from = time_to
 
         #st.write(str(pred))
         os.remove(path)
@@ -188,7 +197,7 @@ if predfile is not None:
     #wr = load_wave_file(predfile)
     wr = wave.open(predfile, 'r')
     n = target_cropper(wr,3)
-    #predict_timestamp_and_remove(n)
-    components.iframe("http://localhost:8501/test",height=600,scrolling=True)
+    predict_timestamp_and_remove(n)
+    #components.html("",height=600,scrolling=True)
 else:
     pass
