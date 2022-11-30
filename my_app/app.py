@@ -29,7 +29,7 @@ batch_size = 16
 epoch = 50
 time = 3
 
-reconstructed_model = load_model("vtuber_reco.h5")
+#reconstructed_model = load_model("vtuber_reco.h5")
 target_label = {0:"Calliope",1:"Ninomae",2:"Watson",3:"Gura",4:"Kiara"}
 
 # hide "created by streamlit"
