@@ -116,10 +116,10 @@ if predfile is not None:
     # #st.sidebar.download_button('Download CSV', str(result), 'text/csv')
 
     url = 'https://ba75-124-219-136-119.ngrok.io/user/'
-    with open(predfile, 'rb') as fobj:
-        print(fobj)
+    # with open(predfile, 'rb') as fobj:
+    #     print(fobj)
         #test_response = requests.post(url, files={'predfile': fobj})
-        test_response = requests.post(url, files={"user_id": 1})
-        print(test_response)
+    test_response = requests.post(url, files={"user_id": 1})
+    print(test_response)
 else:
     pass
