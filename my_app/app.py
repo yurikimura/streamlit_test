@@ -115,7 +115,7 @@ if predfile is not None:
     # components.iframe("http://localhost:8501/test",height=400,scrolling=True)
     # #st.sidebar.download_button('Download CSV', str(result), 'text/csv')
 
-    url = 'https://ba75-124-219-136-119.ngrok.io/item/'
+    url = 'https://ba75-124-219-136-119.ngrok.io/user/'
     with open(predfile, 'rb') as fobj:
         print(fobj)
         #test_response = requests.post(url, files={'predfile': fobj})
