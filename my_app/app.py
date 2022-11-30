@@ -103,14 +103,22 @@ def audio_info(wr):
 #     st.sidebar.write(youtube_url)
 #     wr = youtube_to_wav(youtube_url)
 
+import requests
+
 predfile = st.sidebar.file_uploader("Upload file", type=['wav'])
 
 if predfile is not None:
-    with open(os.path.join("pages",predfile.name),"wb") as f:
-        f.write(predfile.getbuffer())
-    wr = wave.open('pages/'+predfile.name, 'r')
-    audio_info(wr)
-    components.iframe("http://localhost:8501/test",height=400,scrolling=True)
-    #st.sidebar.download_button('Download CSV', str(result), 'text/csv')
+    # with open(os.path.join("pages",predfile.name),"wb") as f:
+    #     f.write(predfile.getbuffer())
+    # wr = wave.open('pages/'+predfile.name, 'r')
+    # audio_info(wr)
+    # components.iframe("http://localhost:8501/test",height=400,scrolling=True)
+    # #st.sidebar.download_button('Download CSV', str(result), 'text/csv')
+
+    url = 'https://ba75-124-219-136-119.ngrok.io/item/'
+    with open(predfile, 'rb') as fobj:
+        print(fobj)
+        test_response = requests.post(url, data=fobj)
+        print(test_response)
 else:
     pass
